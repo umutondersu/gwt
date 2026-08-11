@@ -1,0 +1,15 @@
+# Build artifacts
+/gwt
+/gwt_static
+/dist/
+
+# Go
+*.test
+*.out
+
+# devbox
+.devbox/
+
+# direnv local overrides (keep .envrc)
+.envrc
+.direnv/
