@@ -31,6 +31,18 @@ function __gwt_mv_needs_old
     test $count -lt 1
 end
 
+# Helper: true when at least one non-flag argument has been given after rm
+function __gwt_rm_has_arg
+    set -l tokens (commandline -pxc)
+    set -l count 0
+    for tok in $tokens[3..]
+        if not string match -q -- '-*' $tok
+            set count (math $count + 1)
+        end
+    end
+    test $count -ge 1
+end
+
 # Helper: list local and remote branch names for --from completion
 function __gwt_all_branches
     git branch --format='%(refname:short)' 2>/dev/null
@@ -74,6 +86,11 @@ complete -c gwt -n '__fish_seen_subcommand_from rm' -s B -l keep-branch \
     -d 'Keep the branch'
 complete -c gwt -n '__fish_seen_subcommand_from rm' -s f -l force \
     -d 'Force removal of dirty worktrees'
+# after a worktree is given, cycle the flags into the tab pager too
+complete -c gwt -n '__fish_seen_subcommand_from rm; and __gwt_rm_has_arg' -a '-B' -d 'Keep the branch'
+complete -c gwt -n '__fish_seen_subcommand_from rm; and __gwt_rm_has_arg' -a '--keep-branch' -d 'Keep the branch'
+complete -c gwt -n '__fish_seen_subcommand_from rm; and __gwt_rm_has_arg' -a '-f' -d 'Force removal of dirty worktrees'
+complete -c gwt -n '__fish_seen_subcommand_from rm; and __gwt_rm_has_arg' -a '--force' -d 'Force removal of dirty worktrees'
 
 # --- gwt mv: complete the first arg (old name) only ---
 complete -c gwt -n '__fish_seen_subcommand_from mv; and __gwt_mv_needs_old' \
