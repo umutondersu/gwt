@@ -1,5 +1,7 @@
 BINARY := gwt
 PKG := ./...
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS := -X github.com/umutondersu/gwt/cmd.version=$(VERSION)
 
 .PHONY: help
 help: ## List available targets with descriptions
@@ -10,7 +12,7 @@ all: build ## Build the binary (default)
 
 .PHONY: build
 build: ## Compile the gwt binary
-	go build -o $(BINARY) .
+	go build -ldflags "$(LDFLAGS)" -o $(BINARY) .
 
 .PHONY: test
 test: ## Run all Go tests
@@ -38,7 +40,7 @@ run: ## Run the binary (usage: make run ARGS="add foo")
 
 .PHONY: install
 install: ## Install gwt to GOPATH/bin
-	go install .
+	go install -ldflags "$(LDFLAGS)" .
 
 .PHONY: clean
 clean: ## Remove the built binary
