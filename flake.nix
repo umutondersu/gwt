@@ -10,7 +10,13 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        gwtVersion = builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile ./VERSION);
+        gwtVersion =
+          if builtins.pathExists ./VERSION then
+            builtins.replaceStrings [ "\n" ] [ "" ] (builtins.readFile ./VERSION)
+          else if self ? shortRev then
+            "0.0.0+${self.shortRev}"
+          else
+            "dev";
       in
       {
         packages.default = pkgs.buildGoModule {
