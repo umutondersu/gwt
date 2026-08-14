@@ -20,7 +20,7 @@ var (
 
 var rmCmd = &cobra.Command{
 	Use:   "rm [. | <name>...] [-B] [-f]",
-	Short: "Remove worktrees",
+	Short: "Remove worktrees; -B keeps branch, -f forces dirty",
 	Long:  `Remove worktrees; -B keeps branch, -f forces dirty.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		names := args

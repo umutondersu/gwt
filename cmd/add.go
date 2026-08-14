@@ -19,8 +19,8 @@ var (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add [name]",
-	Short: "Create a worktree",
+	Use:   "add [<name>] [-b <branch>] [-f <from>]",
+	Short: "Create worktree (no arg picks remote branch; -b branch name, -f start point)",
 	Long:  `Create a worktree. If no name is provided, picks a remote branch.`,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

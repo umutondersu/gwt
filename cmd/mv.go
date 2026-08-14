@@ -14,7 +14,7 @@ var mvKeepBranch bool
 
 var mvCmd = &cobra.Command{
 	Use:   "mv [<old>] <new> [-B]",
-	Short: "Move worktree dir",
+	Short: "Move worktree dir; renames branch if it matches, -B keeps it",
 	Long:  `Move worktree dir; renames branch if it matches, -B keeps it.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mainRoot, err := core.MainRoot()
