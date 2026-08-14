@@ -10,8 +10,13 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        latestRelease = builtins.tryEval (
+          builtins.fromJSON (builtins.readFile (builtins.fetchurl "https://api.github.com/repos/umutondersu/gwt/releases/latest"))
+        );
         gwtVersion =
-          if self ? shortRev then
+          if latestRelease.success then
+            latestRelease.value.tag_name
+          else if self ? shortRev then
             "0.0.0+${self.shortRev}"
           else if self ? dirtyShortRev then
             "0.0.0+${self.dirtyShortRev}"
