@@ -338,6 +338,14 @@ func TestCompletion(t *testing.T) {
 		t.Error("got cobra-generated fish completion instead of the handmade one")
 	}
 
+	r = gwt(t, dir, "", "completion")
+	if r.code != 0 {
+		t.Fatalf("completion (bare): code=%d out=%s", r.code, r.out)
+	}
+	if r.out != gwt(t, dir, "", "completion", "fish").out {
+		t.Error("bare completion should default to fish output")
+	}
+
 	r = gwt(t, dir, "", "completion", "bash")
 	if r.code != 0 || !strings.Contains(r.out, "__start_gwt") {
 		t.Errorf("completion bash: code=%d", r.code)

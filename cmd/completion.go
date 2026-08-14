@@ -14,9 +14,14 @@ var completionCmd = &cobra.Command{
 	Use:   "completion",
 	Short: "Generate the autocompletion script for the specified shell",
 	Long: `Generate the autocompletion script for gwt for the specified shell.
+Defaults to fish when no sub-command is given.
 See each sub-command's help for details on how to use the generated script.
 `,
 	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, err := fmt.Fprint(cmd.OutOrStdout(), fishCompletion)
+		return err
+	},
 }
 
 var completionBashCmd = &cobra.Command{
