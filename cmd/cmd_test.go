@@ -323,6 +323,90 @@ func TestLs(t *testing.T) {
 	}
 }
 
+func TestCompletion(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	r := gwt(t, dir, "", "completion", "fish")
+	if r.code != 0 {
+		t.Fatalf("completion fish: code=%d out=%s", r.code, r.out)
+	}
+	if !strings.HasPrefix(r.out, "# Fish completions for gwt") {
+		t.Errorf("expected handmade fish completion, got %q", r.out)
+	}
+	if strings.Contains(r.out, "__gwt_debug") {
+		t.Error("got cobra-generated fish completion instead of the handmade one")
+	}
+
+	r = gwt(t, dir, "", "completion", "bash")
+	if r.code != 0 || !strings.Contains(r.out, "__start_gwt") {
+		t.Errorf("completion bash: code=%d", r.code)
+	}
+}
+
+func TestDependencyBehavior(t *testing.T) {
+	t.Parallel()
+	repo := newRepo(t)
+
+	t.Run("git missing is reported clearly", func(t *testing.T) {
+		t.Parallel()
+		shim := filepath.Join(t.TempDir(), "tmux")
+		if err := os.WriteFile(shim, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.Command(bin, "ls")
+		cmd.Dir = repo
+		cmd.Env = []string{"PATH=" + filepath.Dir(shim)}
+		out, err := cmd.CombinedOutput()
+		if err == nil {
+			t.Fatalf("expected failure with git missing, got %s", out)
+		}
+		if !strings.Contains(string(out), "git is required") {
+			t.Errorf("expected git-required error, got %q", out)
+		}
+	})
+
+	t.Run("tmux missing warns but worktree ops succeed", func(t *testing.T) {
+		t.Parallel()
+		gitPath, err := exec.LookPath("git")
+		if err != nil {
+			t.Fatal(err)
+		}
+		gitDir := filepath.Dir(gitPath)
+		if _, err := exec.LookPath(filepath.Join(gitDir, "tmux")); err == nil {
+			t.Skip("tmux resolves inside git's dir; cannot simulate a missing tmux")
+		}
+		cmd := exec.Command(bin, "add", "feature")
+		cmd.Dir = repo
+		cmd.Env = []string{"PATH=" + gitDir}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("add with missing tmux: %v\n%s", err, out)
+		}
+		if !strings.Contains(string(out), "tmux not found") {
+			t.Errorf("expected tmux warning, got %q", out)
+		}
+		if !worktreeExists(repo, "feature") {
+			t.Error("worktree/feature not created")
+		}
+	})
+
+	t.Run("interactive picker requires a terminal", func(t *testing.T) {
+		t.Parallel()
+		cmd := exec.Command(bin, "pick")
+		cmd.Dir = repo
+		cmd.Stdin = strings.NewReader("")
+		cmd.Env = replaceEnvPath(os.Environ(), t.TempDir())
+		out, err := cmd.CombinedOutput()
+		if err == nil {
+			t.Fatalf("expected failure for non-tty pick, got %s", out)
+		}
+		if !strings.Contains(string(out), "requires a terminal") {
+			t.Errorf("expected terminal error, got %q", out)
+		}
+	})
+}
+
 func TestPick(t *testing.T) {
 	t.Parallel()
 	repo := newRepo(t)

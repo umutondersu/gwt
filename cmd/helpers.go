@@ -9,6 +9,7 @@ import (
 
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/mattn/go-runewidth"
+	"golang.org/x/term"
 
 	"github.com/umutondersu/gwt/core"
 )
@@ -27,6 +28,10 @@ func splitLines(s string) []string {
 		return nil
 	}
 	return strings.Split(s, "\n")
+}
+
+func isTerminal(f *os.File) bool {
+	return term.IsTerminal(int(f.Fd()))
 }
 
 func padRight(s string, width int) string {
@@ -67,6 +72,9 @@ func prompt(message string) (string, error) {
 }
 
 func pickBranch(refs []string) (string, error) {
+	if !isTerminal(os.Stdin) {
+		return "", fmt.Errorf("interactive selection requires a terminal; pass a name explicitly")
+	}
 	idx, err := fuzzyfinder.Find(
 		refs,
 		func(i int) string { return strings.TrimPrefix(refs[i], "origin/") },
@@ -83,6 +91,9 @@ func pickBranch(refs []string) (string, error) {
 }
 
 func pickWorktree(names, paths []string) (string, error) {
+	if !isTerminal(os.Stdin) {
+		return "", fmt.Errorf("interactive selection requires a terminal; pass a name explicitly")
+	}
 	idx, err := fuzzyfinder.Find(
 		paths,
 		func(i int) string { return names[i] },
@@ -99,6 +110,9 @@ func pickWorktree(names, paths []string) (string, error) {
 }
 
 func pickWorktreesToRemove(names, paths []string) ([]string, error) {
+	if !isTerminal(os.Stdin) {
+		return nil, fmt.Errorf("interactive selection requires a terminal; pass names explicitly")
+	}
 	indices, err := fuzzyfinder.FindMulti(
 		paths,
 		func(i int) string { return names[i] },

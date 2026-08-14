@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -10,6 +12,10 @@ func Connect(wtPath string) error {
 	mainRoot, err := MainRoot()
 	if err != nil {
 		return err
+	}
+	if !HasTmux() {
+		fmt.Fprintln(os.Stderr, "warning: tmux not found; no session will be created or attached")
+		return nil
 	}
 	repoName := filepath.Base(mainRoot)
 	var sessionName string

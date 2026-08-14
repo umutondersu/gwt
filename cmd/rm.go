@@ -96,6 +96,10 @@ var rmCmd = &cobra.Command{
 
 		allPaths := append(paths, fzfPaths...)
 
+		if !core.HasTmux() {
+			fmt.Fprintln(os.Stderr, "warning: tmux not found; sessions will not be killed or respawned")
+		}
+
 		for _, path := range allPaths {
 			curPaneID := core.PaneID()
 			curPanePath := core.PanePath()

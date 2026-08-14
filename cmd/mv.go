@@ -61,6 +61,10 @@ var mvCmd = &cobra.Command{
 		oldSess := repoName + "/" + oldName
 		newSess := repoName + "/" + newName
 
+		if !core.HasTmux() {
+			fmt.Fprintln(os.Stderr, "warning: tmux not found; sessions will not be renamed or respawned")
+		}
+
 		renamedOtherSession := false
 		var curPaneID string
 		if renameCurrent {

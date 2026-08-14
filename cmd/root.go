@@ -14,11 +14,26 @@ var rootCmd = &cobra.Command{
 	Short: "Git worktree manager",
 	Long:  `A fast, portable Git worktree orchestrator wrapping Git and Tmux.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if cmd.Name() != "gwt" && cmd.Name() != "version" && !core.IsInsideWorkTree() {
+		if cmd.Name() == "gwt" || cmd.Name() == "version" || inCompletionTree(cmd) {
+			return nil
+		}
+		if !core.HasGit() {
+			return fmt.Errorf("git is required but was not found in PATH")
+		}
+		if !core.IsInsideWorkTree() {
 			return fmt.Errorf("not inside a git repository")
 		}
 		return nil
 	},
+}
+
+func inCompletionTree(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		if c.Name() == "completion" {
+			return true
+		}
+	}
+	return false
 }
 
 func Execute() {
