@@ -14,7 +14,7 @@ var rootCmd = &cobra.Command{
 	Short: "Git worktree manager",
 	Long:  `A fast, portable Git worktree orchestrator wrapping Git and Tmux.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if cmd.Name() != "gwt" && !core.IsInsideWorkTree() {
+		if cmd.Name() != "gwt" && cmd.Name() != "version" && !core.IsInsideWorkTree() {
 			return fmt.Errorf("not inside a git repository")
 		}
 		return nil
