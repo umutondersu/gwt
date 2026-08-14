@@ -17,6 +17,7 @@
           version = "0.1.0";
           src = ./.;
           vendorHash = null;
+          nativeBuildInputs = [ pkgs.git ];
         };
         packages.gwt = self.packages.${system}.default;
 
