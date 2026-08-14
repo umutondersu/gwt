@@ -42,12 +42,19 @@ complete -c gwt -f
 
 # --- Subcommands ---
 complete -c gwt -n __fish_use_subcommand -a add    -d 'Create worktree (no arg picks remote branch; -b branch name, -f start point)'
+complete -c gwt -n __fish_use_subcommand -a completion -d 'Generate the autocompletion script for the specified shell'
 complete -c gwt -n __fish_use_subcommand -a init   -d 'Ensure worktree/ dir is git-ignored'
 complete -c gwt -n __fish_use_subcommand -a ls     -d 'List worktrees'
 complete -c gwt -n __fish_use_subcommand -a mv     -d 'Move worktree dir; renames branch if it matches, -B keeps it'
 complete -c gwt -n __fish_use_subcommand -a pick   -d 'Pick a worktree and connect to its session'
 complete -c gwt -n __fish_use_subcommand -a rm     -d 'Remove worktrees; -B keeps branch, -f forces dirty'
 complete -c gwt -n __fish_use_subcommand -a version -d 'Print version information'
+
+# --- gwt completion: shells ---
+complete -c gwt -n '__fish_seen_subcommand_from completion' -a bash -d 'Generate the autocompletion script for bash'
+complete -c gwt -n '__fish_seen_subcommand_from completion' -a zsh -d 'Generate the autocompletion script for zsh'
+complete -c gwt -n '__fish_seen_subcommand_from completion' -a fish -d 'Generate the autocompletion script for fish'
+complete -c gwt -n '__fish_seen_subcommand_from completion' -a powershell -d 'Generate the autocompletion script for powershell'
 
 # --- gwt add: branch name arg (remote branches), -b branch, -f start point ---
 complete -c gwt -n '__fish_seen_subcommand_from add' \
