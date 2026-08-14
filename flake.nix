@@ -10,14 +10,22 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        gwtVersion =
+          if self ? shortRev then
+            "0.0.0+${self.shortRev}"
+          else if self ? dirtyShortRev then
+            "0.0.0+${self.dirtyShortRev}"
+          else
+            "dev";
       in
       {
         packages.default = pkgs.buildGoModule {
           pname = "gwt";
-          version = "0.1.0";
+          version = gwtVersion;
           src = ./.;
           vendorHash = null;
           nativeBuildInputs = [ pkgs.git ];
+          ldflags = [ "-X github.com/umutondersu/gwt/cmd.version=${gwtVersion}" ];
         };
         packages.gwt = self.packages.${system}.default;
 
