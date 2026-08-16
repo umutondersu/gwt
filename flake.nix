@@ -24,6 +24,7 @@
           version = gwtVersion;
           src = ./.;
           vendorHash = null;
+          excludedPackages = [ "third_party" ];
           nativeBuildInputs = [ pkgs.git ];
           ldflags = [ "-X github.com/umutondersu/gwt/cmd.version=${gwtVersion}" ];
         };
