@@ -55,6 +55,53 @@ func PanesInPath(path string) []string {
 	return sessions
 }
 
+// SessionsUnderPath returns the sessions with a pane whose current working
+// directory is path or somewhere below it (e.g. a subdirectory of the
+// worktree). Useful for closing ongoing commands before removing a worktree.
+func SessionsUnderPath(path string) []string {
+	return parseSessionsUnderPath(
+		TmuxOutput("list-panes", "-a", "-F", "#{session_name} #{pane_current_path}"),
+		path,
+	)
+}
+
+func parseSessionsUnderPath(out, path string) []string {
+	seen := map[string]bool{}
+	var sessions []string
+	for _, line := range strings.Split(out, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && IsUnderPath(fields[1], path) && !seen[fields[0]] {
+			seen[fields[0]] = true
+			sessions = append(sessions, fields[0])
+		}
+	}
+	sort.Strings(sessions)
+	return sessions
+}
+
+// IsUnderPath reports whether cwd is dir or a directory below it.
+func IsUnderPath(cwd, dir string) bool {
+	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(cwd))
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+}
+
+// PaneCwds returns the current working directory of every pane in a session,
+// keyed by pane id.
+func PaneCwds(sess string) map[string]string {
+	out := TmuxOutput("list-panes", "-t", "="+sess, "-F", "#{pane_id} #{pane_current_path}")
+	cwds := map[string]string{}
+	for _, line := range strings.Split(out, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			cwds[fields[0]] = fields[1]
+		}
+	}
+	return cwds
+}
+
 func PanesInSession(sess string) []string {
 	out := TmuxOutput("list-panes", "-t", "="+sess, "-F", "#{pane_id}")
 	return splitLines(out)

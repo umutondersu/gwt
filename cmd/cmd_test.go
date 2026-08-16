@@ -1,11 +1,15 @@
 package cmd_test
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 var bin string
@@ -267,6 +271,199 @@ func TestRm(t *testing.T) {
 			t.Error("branch um should have been kept")
 		}
 	})
+}
+
+// processAlive reports whether a process with the given pid still exists.
+func processAlive(pid int) bool {
+	err := syscall.Kill(pid, 0)
+	return err == nil || errors.Is(err, syscall.EPERM)
+}
+
+func TestRmClosesRunningProcesses(t *testing.T) {
+	t.Parallel()
+	repo := newRepo(t)
+	if r := gwt(t, repo, "", "add", "one"); r.code != 0 {
+		t.Fatalf("setup add one: %d %s", r.code, r.out)
+	}
+
+	wt, err := filepath.EvalSymlinks(filepath.Join(repo, "worktree", "one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	subDir := filepath.Join(wt, "subdir")
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// A tmux shim that reports a session "repo/one" whose pane is running in a
+	// subdirectory of the worktree (an ongoing command like nvim or a dev
+	// server) and that kills a real background process on kill-session, just
+	// like real tmux SIGHUPs the pane's process tree.
+	shimDir := t.TempDir()
+	pidFile := filepath.Join(shimDir, "pid")
+	logFile := filepath.Join(shimDir, "tmux.log")
+	shim := filepath.Join(shimDir, "tmux")
+	script := fmt.Sprintf(`#!/bin/sh
+case "$1" in
+  display-message)
+    printf 'other\n'
+    ;;
+  list-panes)
+    a=0
+    for x in "$@"; do [ "$x" = "-a" ] && a=1; done
+    if [ "$a" = 1 ]; then
+      printf 'repo/one %s/subdir\n'
+    fi
+    ;;
+  kill-session)
+    printf 'kill-session %%s\n' "$*" >>"%s"
+    if [ -f "%s" ]; then kill "$(cat "%s")" 2>/dev/null; fi
+    ;;
+  *) exit 0 ;;
+esac
+`, wt, logFile, pidFile, pidFile)
+	if err := os.WriteFile(shim, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Spawn the "ongoing command" with its cwd inside the worktree, as a long
+	// running process whose pid the shim will terminate on kill-session.
+	srv := exec.Command("sh", "-c", fmt.Sprintf(`echo $$ > %s; exec sleep 300`, pidFile))
+	srv.Dir = subDir
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = srv.Process.Kill() }()
+
+	var pid int
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if data, err := os.ReadFile(pidFile); err == nil {
+			if _, err := fmt.Sscanf(strings.TrimSpace(string(data)), "%d", &pid); err == nil && pid > 0 {
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("pid file was never written by the emulated command")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if pid == 0 {
+		t.Fatal("failed to parse emulated command pid")
+	}
+	if !processAlive(pid) {
+		t.Fatal("emulated command died before rm ran")
+	}
+
+	cmd := exec.Command(bin, "rm", "one")
+	cmd.Dir = repo
+	cmd.Env = replaceEnvPath(os.Environ(), shimDir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("rm one with active process: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "Removed:") {
+		t.Errorf("rm output: %q", out)
+	}
+	if worktreeExists(repo, "one") {
+		t.Error("worktree/one still exists")
+	}
+
+	logData, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(logData), "kill-session") || !strings.Contains(string(logData), "repo/one") {
+		t.Errorf("expected kill-session for repo/one, shim log: %q", logData)
+	}
+
+	// The ongoing command must have been closed before removal completed.
+	done := make(chan error, 1)
+	go func() { done <- srv.Wait() }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Error("emulated ongoing command was not closed by rm")
+	}
+}
+
+func TestRmRespawnsCurrentSessionPanes(t *testing.T) {
+	t.Parallel()
+	repo := newRepo(t)
+	if r := gwt(t, repo, "", "add", "one"); r.code != 0 {
+		t.Fatalf("setup add one: %d %s", r.code, r.out)
+	}
+
+	mainRoot, err := filepath.EvalSymlinks(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wt, err := filepath.EvalSymlinks(filepath.Join(repo, "worktree", "one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	subDir := filepath.Join(wt, "subdir")
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Current session "other" is unrelated to the worktree but has a pane
+	// running inside it; rm must re-home it to mainRoot, not kill the session.
+	shimDir := t.TempDir()
+	logFile := filepath.Join(shimDir, "tmux.log")
+	shim := filepath.Join(shimDir, "tmux")
+	script := fmt.Sprintf(`#!/bin/sh
+case "$1" in
+  display-message)
+    printf 'other\n'
+    ;;
+  list-panes)
+    a=0
+    t=0
+    for x in "$@"; do
+      [ "$x" = "-a" ] && a=1
+      case "$x" in -t*) t=1 ;; esac
+    done
+    if [ "$a" = "1" ]; then
+      printf 'other %s/subdir\n'
+    elif [ "$t" = "1" ]; then
+      printf 'p1 %s/subdir\n'
+    fi
+    ;;
+  respawn-pane)
+    printf 'respawn-pane %%s\n' "$*" >>"%s"
+    ;;
+  kill-session)
+    printf 'kill-session %%s\n' "$*" >>"%s"
+    ;;
+  *) exit 0 ;;
+esac
+`, wt, wt, logFile, logFile)
+	if err := os.WriteFile(shim, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(bin, "rm", "one")
+	cmd.Dir = repo
+	cmd.Env = replaceEnvPath(os.Environ(), shimDir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("rm one: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "Removed:") {
+		t.Errorf("rm output: %q", out)
+	}
+
+	logData, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(logData), "respawn-pane") || !strings.Contains(string(logData), mainRoot) {
+		t.Errorf("expected respawn-pane into %s, shim log: %q", mainRoot, logData)
+	}
+	if strings.Contains(string(logData), "kill-session") {
+		t.Errorf("current session must not be killed, shim log: %q", logData)
+	}
 }
 
 func TestMv(t *testing.T) {

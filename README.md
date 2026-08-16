@@ -59,7 +59,7 @@ auto-ignored (`gwt init`); each one gets its own tmux session named
 | `gwt add <name> -f <ref>` | Create the branch from a start point |
 | `gwt ls` | List worktrees and their branches |
 | `gwt pick [<name>]` | Connect the current tmux session to a worktree |
-| `gwt rm <name>...` | Remove worktrees (deletes merged branches; `-B` keeps, `-f` forces dirty) |
+| `gwt rm <name>...` | Remove worktrees (closes tmux sessions/processes running inside first; deletes merged branches; `-B` keeps, `-f` forces dirty) |
 | `gwt rm .` | Refuses to remove the main worktree |
 | `gwt mv <old> <new>` | Move the worktree dir; renames the branch (`-B` keeps it) |
 

@@ -101,13 +101,32 @@ var rmCmd = &cobra.Command{
 		}
 
 		for _, path := range allPaths {
-			curPaneID := core.PaneID()
-			curPanePath := core.PanePath()
 			curSession := core.SessionName()
 
 			var branch string
 			if !rmKeepBranch {
 				branch = strings.TrimPrefix(core.BranchOfWorktree(path), "refs/heads/")
+			}
+
+			repoName := filepath.Base(mainRoot)
+			wtName := core.PathToName(path, mainRoot)
+			sessUnder := core.SessionsUnderPath(path)
+			if curSession != "" && containsPath(sessUnder, curSession) {
+				if curSession == repoName+"/"+wtName {
+					core.TmuxQuiet("kill-session", "-t", "="+curSession)
+				} else {
+					for pane, cwd := range core.PaneCwds(curSession) {
+						if core.IsUnderPath(cwd, path) {
+							core.TmuxQuiet("respawn-pane", "-t", pane, "-k", "-c", mainRoot)
+						}
+					}
+				}
+			}
+			for _, sess := range sessUnder {
+				if sess != curSession {
+					core.TmuxQuiet("kill-session", "-t", "="+sess)
+					fmt.Printf("Killed session: %s\n", sess)
+				}
 			}
 
 			var rmArgs []string
@@ -147,23 +166,6 @@ var rmCmd = &cobra.Command{
 				}
 				if err := core.GitQuietIn(mainRoot, "update-ref", "-d", branchRef); err == nil {
 					fmt.Printf("Deleted branch: %s\n", branch)
-				}
-			}
-
-			for _, sess := range core.PanesInPath(path) {
-				if sess != curSession {
-					core.TmuxQuiet("kill-session", "-t", "="+sess)
-					fmt.Printf("Killed session: %s\n", sess)
-				}
-			}
-
-			if curPanePath != "" && curPanePath == path {
-				repoName := filepath.Base(mainRoot)
-				wtName := core.PathToName(path, mainRoot)
-				if curSession == repoName+"/"+wtName {
-					core.TmuxQuiet("kill-session", "-t", "="+curSession)
-				} else {
-					core.TmuxQuiet("respawn-pane", "-t", curPaneID, "-k", "-c", mainRoot)
 				}
 			}
 		}
