@@ -4,7 +4,7 @@
 
 This is the Go port of the original `gwt` Fish shell function, which used to
 live at `~/.config/fish/functions/gwt.fish` in my
-[dotfiles](https://github.com/umutondersu/dotfiles).
+[dotfiles](https://github.com/umutondersu/dotfiles/commit/07db9bd7c4617aee50ca92790a431c21cf47a549).
 Where the Fish version cobbles together `git` plumbing, `tmux`, and `fzf` with
 string parsing, `gwt` ships as a single static binary with native fuzzy-finding
 (`go-fuzzyfinder`), proper argument parsing (Cobra), and a testable core.
