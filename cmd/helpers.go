@@ -78,6 +78,7 @@ func pickBranch(refs []string) (string, error) {
 	idx, err := fuzzyfinder.Find(
 		refs,
 		func(i int) string { return strings.TrimPrefix(refs[i], "origin/") },
+		fuzzyfinder.WithLayout(fuzzyfinder.LayoutReverse),
 		fuzzyfinder.WithPromptString("Create worktree from branch> "),
 		fuzzyfinder.WithHeader("Enter to create worktree"),
 		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
@@ -97,6 +98,7 @@ func pickWorktree(names, paths []string) (string, error) {
 	idx, err := fuzzyfinder.Find(
 		paths,
 		func(i int) string { return names[i] },
+		fuzzyfinder.WithLayout(fuzzyfinder.LayoutReverse),
 		fuzzyfinder.WithPromptString("Switch to worktree> "),
 		fuzzyfinder.WithHeader("Enter to connect"),
 		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
@@ -116,6 +118,7 @@ func pickWorktreesToRemove(names, paths []string) ([]string, error) {
 	indices, err := fuzzyfinder.FindMulti(
 		paths,
 		func(i int) string { return names[i] },
+		fuzzyfinder.WithLayout(fuzzyfinder.LayoutReverse),
 		fuzzyfinder.WithPromptString("Remove worktrees> "),
 		fuzzyfinder.WithHeader("Tab to multi-select, Enter to confirm"),
 		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {

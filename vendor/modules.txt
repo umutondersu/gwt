@@ -68,7 +68,7 @@ github.com/inconshreveable/mousetrap
 # github.com/ktr0731/go-ansisgr v0.1.0
 ## explicit; go 1.19
 github.com/ktr0731/go-ansisgr
-# github.com/ktr0731/go-fuzzyfinder v0.9.0
+# github.com/ktr0731/go-fuzzyfinder v0.9.0 => ./third_party/go-fuzzyfinder
 ## explicit; go 1.24
 github.com/ktr0731/go-fuzzyfinder
 github.com/ktr0731/go-fuzzyfinder/matching
@@ -194,3 +194,4 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
+# github.com/ktr0731/go-fuzzyfinder => ./third_party/go-fuzzyfinder
